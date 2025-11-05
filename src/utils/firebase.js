@@ -1,11 +1,10 @@
 import { useSelector } from "react-redux";
-import Loader from "@/components/loader/Loader";
 import { getApp, getApps, initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getMessaging, onMessage } from "firebase/messaging";
 import firebase from "firebase/compat/app";
+import { isSupported, getMessaging, onMessage } from "firebase/messaging";
 
-const FirebaseData = () => {
+const FirebaseData = async () => {
   const setting = useSelector((state) => state.Setting);
 
   const firebaseConfig = {
@@ -18,12 +17,11 @@ const FirebaseData = () => {
     measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
   };
 
-  // Initialize compat app if not already initialized
+  // ✅ Initialize Firebase only once (compat + modular safe)
   if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
   }
 
-  // Initialize modular Firebase app
   const firebaseApp = !getApps().length
     ? initializeApp(firebaseConfig)
     : getApp();
@@ -32,26 +30,37 @@ const FirebaseData = () => {
 
   let messaging = null;
 
-  // ✅ Only initialize messaging on the client
-  if (typeof window !== "undefined") {
+  // ✅ Only execute on client and when supported
+  if (
+    typeof window !== "undefined" &&
+    typeof navigator !== "undefined" &&
+    "serviceWorker" in navigator &&
+    "Notification" in window
+  ) {
     try {
-      messaging = getMessaging(firebaseApp);
+      const supported = await isSupported(); // <- check browser support
+      if (supported) {
+        messaging = getMessaging(firebaseApp);
 
-      // ✅ onMessage also only in browser context
-      onMessage(messaging, (payload) => {
-        const data = payload?.data;
-        console.log("Front Notification:", data);
+        onMessage(messaging, (payload) => {
+          const data = payload?.data;
+          console.log("🔥 Front Notification:", data);
 
-        if (Notification.permission === "granted") {
-          new Notification(data?.title || "Notification", {
-            body: data?.message || "",
-            // icon: data?.image || setting?.setting?.web_settings?.web_logo,
-          });
-        }
-      });
+          if (Notification.permission === "granted") {
+            new Notification(data?.title || "Notification", {
+              body: data?.message || "",
+              // icon: data?.image || setting?.setting?.web_settings?.web_logo,
+            });
+          }
+        });
+      } else {
+        console.log("⚠️ Firebase Messaging not supported in this browser.");
+      }
     } catch (err) {
-      console.log("Messaging Error:", err?.message);
+      console.log("❌ Messaging init error:", err.message);
     }
+  } else {
+    console.log("⚠️ Window/Notification APIs not available — skipping FCM init.");
   }
 
   return { auth, firebaseApp, messaging };
