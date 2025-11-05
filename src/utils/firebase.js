@@ -7,6 +7,7 @@ import firebase from "firebase/compat/app";
 
 const FirebaseData = () => {
   const setting = useSelector((state) => state.Setting);
+
   const firebaseConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
     authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -17,38 +18,43 @@ const FirebaseData = () => {
     measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
   };
 
+  // Initialize compat app if not already initialized
   if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
   }
 
-  const app = initializeApp(firebaseConfig);
-
-  const auth = getAuth(app);
-
+  // Initialize modular Firebase app
   const firebaseApp = !getApps().length
     ? initializeApp(firebaseConfig)
     : getApp();
 
-  let messaging;
+  const auth = getAuth(firebaseApp);
+
+  let messaging = null;
+
+  // ✅ Only initialize messaging on the client
   if (typeof window !== "undefined") {
-    messaging = getMessaging(app);
-  }
+    try {
+      messaging = getMessaging(firebaseApp);
 
-  try {
-    onMessage(messaging, (payload) => {
-      const data = payload?.data;
-      console.log("Front Notification:", data);
-      new Notification(data?.title, {
-        body: data?.message,
+      // ✅ onMessage also only in browser context
+      onMessage(messaging, (payload) => {
+        const data = payload?.data;
+        console.log("Front Notification:", data);
 
-        // icon: data?.image || setting?.setting?.web_settings?.web_logo,
+        if (Notification.permission === "granted") {
+          new Notification(data?.title || "Notification", {
+            body: data?.message || "",
+            // icon: data?.image || setting?.setting?.web_settings?.web_logo,
+          });
+        }
       });
-    });
-  } catch (err) {
-    console.log("Messaging Error:", err?.message);
+    } catch (err) {
+      console.log("Messaging Error:", err?.message);
+    }
   }
 
-  return { auth, app, firebaseApp, messaging };
+  return { auth, firebaseApp, messaging };
 };
 
 export default FirebaseData;
