@@ -1,12 +1,10 @@
-import { useSelector } from "react-redux";
+
 import { getApp, getApps, initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import firebase from "firebase/compat/app";
 import { isSupported, getMessaging, onMessage } from "firebase/messaging";
 
 const FirebaseData = async () => {
-  const setting = useSelector((state) => state.Setting);
-
   const firebaseConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
     authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
