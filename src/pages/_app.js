@@ -11,11 +11,26 @@ import { useRouter } from "next/router";
 import { ThemeProvider } from 'next-themes';
 import MetaData from "@/components/metadata-component/MetaData";
 import { ErrorBoundary } from "next/dist/client/components/error-boundary";
-
+import  FirebaseData  from "../utils/firebase";
 
 export default function App({ Component, pageProps }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/firebase-messaging-sw.js")
+        .then((registration) => {
+          console.log("✅ Service Worker registered:", registration.scope);
+        })
+        .catch((err) =>
+          console.error("❌ Service Worker registration failed:", err)
+        );
+    }
+
+    FirebaseData(); // initialize your Firebase setup
+  }, []);
+
   useEffect(() => {
     // Show loader on route change start
     const handleStart = () => setLoading(true);
@@ -37,13 +52,13 @@ export default function App({ Component, pageProps }) {
   return (
     <main>
       <ErrorBoundary>
-      <Provider store={store}>
-        <ThemeProvider attribute="class" defaultTheme="light">
-          <Suspense fallback={<Loader screen="full" />}>
-            <Component {...pageProps} />
-          </Suspense>
-        </ThemeProvider >
-      </Provider>
+        <Provider store={store}>
+          <ThemeProvider attribute="class" defaultTheme="light">
+            <Suspense fallback={<Loader screen="full" />}>
+              <Component {...pageProps} />
+            </Suspense>
+          </ThemeProvider >
+        </Provider>
       </ErrorBoundary>
     </main>
   );

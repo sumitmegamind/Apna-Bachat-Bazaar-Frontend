@@ -37,6 +37,8 @@ const FirebaseData = async () => {
   ) {
     try {
       const supported = await isSupported(); // <- check browser support
+      console.log('-------------------->',supported);
+      
       if (supported) {
         messaging = getMessaging(firebaseApp);
 
